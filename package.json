@@ -1,0 +1,15 @@
+{
+  "name": "itunes-api",
+  "version": "1.0.0",
+  "description": "Jimin iTunes API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}
