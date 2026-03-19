@@ -8,40 +8,80 @@ app.use(cors());
 
 app.get("/jimin-itunes", async (req, res) => {
   try {
-
     const url = "https://kworb.net/itunes/artist/jimin.html";
 
-    const { data } = await axios.get(url);
+    const { data } = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
+
     const $ = cheerio.load(data);
 
     const songs = [];
+    const songMap = {};
 
-    $("table tbody tr").each((i, el) => {
+    // 🔥 ambil per kolom lagu
+    $("div[style*='float:left']").each((i, el) => {
 
-      const cols = $(el).find("td");
+      const title = $(el).find("b").first().text().trim();
+      if (!title) return;
 
-      const country = cols.eq(0).text().trim();
-      const title = cols.eq(1).text().trim();
-      const rankText = cols.eq(2).text().trim();
+      $(el).contents().each((j, node) => {
 
-      const rank = parseInt(rankText);
+        const text = $(node).text().trim();
 
-      // ❗ filter biar gak error
-      if (!country || !title || isNaN(rank)) return;
+        const match = text.match(/#(\d+)\s(.+)/);
 
-      songs.push({
-        country,
-        title,
-        rank,
-        isTop1: rank === 1
+        if (match) {
+          const rank = parseInt(match[1]);
+          const country = match[2];
+
+          const item = {
+            title,
+            country,
+            rank,
+            isTop1: rank === 1
+          };
+
+          songs.push(item);
+
+          // 🔥 GROUP PER LAGU
+          if (!songMap[title]) {
+            songMap[title] = {
+              title,
+              totalTop1: 0,
+              countriesTop1: []
+            };
+          }
+
+          if (rank === 1) {
+            songMap[title].totalTop1++;
+            songMap[title].countriesTop1.push(country);
+          }
+        }
+
       });
 
     });
 
+    // 🔥 FORMAT HASIL PER LAGU
+    const summary = Object.values(songMap);
+
+    // 🔥 TOTAL GLOBAL #1
+    const totalTop1Global = songs.filter(s => s.rank === 1).length;
+
+    // 🔥 FORMAT KST
+    const kstDate = new Date().toLocaleString("en-GB", {
+      timeZone: "Asia/Seoul"
+    });
+
     res.json({
-      updated: new Date().toLocaleString(),
-      total: songs.length,
-      songs
+      updated: kstDate + " (KST)",
+      totalEntries: songs.length,
+      totalTop1Global,
+      songs,
+      summary
     });
 
   } catch (err) {
@@ -51,5 +91,5 @@ app.get("/jimin-itunes", async (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log("KWORB iTunes server running on http://localhost:3000");
+  console.log("KWORB iTunes PRO server running on port 3000");
 });
